@@ -123,7 +123,7 @@ namespace BulkRepository
         /// <param name="item">原列表</param>
         /// <param name="method">处理方法</param>
         /// <param name="currentItem">要进行处理的新列表</param>
-        private void DataPageProcess(IEnumerable<TEntity> item, Action<IEnumerable<TEntity>> method)
+        private void DataPageProcess<TEntity>(IEnumerable<TEntity> item, Action<IEnumerable<TEntity>> method)
         {
             if (item != null && item.Any())
             {
@@ -160,7 +160,7 @@ namespace BulkRepository
         /// <param name="entity">实体列表</param>
         /// <param name="fieldParams">要更新的字段</param>
         /// <returns></returns>
-        private Tuple<string, object[]> CreateUpdateSql(TEntity entity, List<string> pkList, params string[] fieldParams)
+        private Tuple<string, object[]> CreateUpdateSql<TEntity>(TEntity entity, List<string> pkList, params string[] fieldParams)
         {
             if (entity == null)
                 throw new ArgumentException("The database entity can not be null.");
@@ -239,13 +239,13 @@ namespace BulkRepository
         /// <typeparam name="TEntity"></typeparam>
         /// <param name="entity"></param>
         /// <returns></returns>
-        private Tuple<string, object[]> CreateDeleteSql(TEntity entity)
+        private Tuple<string, object[]> CreateDeleteSql<TEntity>(List<string> pkList, TEntity entity)
         {
             if (entity == null)
                 throw new ArgumentException("The database entity can not be null.");
 
             Type entityType = entity.GetType();
-            List<string> pkList = GetPrimaryKey().Select(i => i.Name).ToList();
+          
             if (pkList == null || pkList.Count == 0)
                 throw new ArgumentException("The Table entity have not a primary key.");
 
@@ -278,7 +278,7 @@ namespace BulkRepository
         /// <typeparam name="TEntity"></typeparam>
         /// <param name="entity"></param>
         /// <returns></returns>
-        private Tuple<string, object[]> CreateInsertSql(TEntity entity)
+        private Tuple<string, object[]> CreateInsertSql<TEntity>(List<string> pkList,TEntity entity)
         {
             if (entity == null)
                 throw new ArgumentException("The database entity can not be null.");
@@ -289,9 +289,7 @@ namespace BulkRepository
                  && !i.PropertyType.IsEnum
                  && (i.PropertyType.IsValueType || i.PropertyType == typeof(string))).ToArray();//过滤主键，航行属性，状态属性等
 
-            var pkList = new List<string>();
-            if (GetPrimaryKey() != null)//有时主键可能没有设计，这对于添加操作是可以的
-                pkList = GetPrimaryKey().Select(i => i.Name).ToList();
+        
             var arguments = new List<object>();
             var fieldbuilder = new StringBuilder();
             var valuebuilder = new StringBuilder();
@@ -348,7 +346,7 @@ namespace BulkRepository
         /// <param name="list"></param>
         /// <param name="sqlType"></param>
         /// <returns></returns>
-        private string DoSql(IEnumerable<TEntity> list, SqlType sqlType)
+        private string DoSql<TEntity>(IEnumerable<TEntity> list, SqlType sqlType)
         {
             return DoSql(list, sqlType, null);
         }
@@ -359,7 +357,7 @@ namespace BulkRepository
         /// <param name="list"></param>
         /// <param name="sqlType"></param>
         /// <returns></returns>
-        private string DoSql(IEnumerable<TEntity> list, SqlType sqlType, List<string> pkList, params string[] fieldParams)
+        private string DoSql<TEntity>(IEnumerable<TEntity> list, SqlType sqlType, List<string> pkList, params string[] fieldParams)
         {
             var sqlstr = new StringBuilder();
             switch (sqlType)
@@ -367,7 +365,7 @@ namespace BulkRepository
                 case SqlType.Insert:
                     list.ToList().ForEach(i =>
                     {
-                        Tuple<string, object[]> sql = CreateInsertSql(i);
+                        Tuple<string, object[]> sql = CreateInsertSql(pkList,i);
                         sqlstr.AppendFormat(sql.Item1, sql.Item2);
                     });
                     break;
@@ -381,7 +379,7 @@ namespace BulkRepository
                 case SqlType.Delete:
                     list.ToList().ForEach(i =>
                     {
-                        Tuple<string, object[]> sql = CreateDeleteSql(i);
+                        Tuple<string, object[]> sql = CreateDeleteSql(pkList,i);
                         sqlstr.AppendFormat(sql.Item1, sql.Item2);
                     });
                     break;
